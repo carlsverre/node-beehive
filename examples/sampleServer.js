@@ -3,6 +3,8 @@ require('express');
 require('express/plugins');
 require('node-beehive');
 
+puts(inspect(Express));
+
 configure(function() {
   use(MethodOverride);
   use(ContentLength);
