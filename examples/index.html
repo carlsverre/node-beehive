@@ -1,0 +1,28 @@
+<html>
+  <head>
+    <title>Node-Beehive Example Worker</title>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js" type="text/javascript"></script>
+    <script src="js/beehive-client.js" type="text/javascript"></script>
+    <script type="text/javascript">
+      $(document).ready(function() {
+        var hive = new BeehiveClient({
+          debug: function(s) {
+            console.log(s);
+            $('#log').append("<br>"+s);
+          },
+          debugLevel: 5
+        });
+
+        hive.jobLoop();
+
+        $("#pause").click(hive.pause);
+        $("#resume").click(hive.resume);
+      });
+    </script>
+  </head>
+  <body>
+    <input name="pause" type="button" id="pause" value="pause" class="button" />
+    <input name="resume" type="button" id="resume" value="Resume" class="button" />
+    <div id="log" style="border: 1px #000 solid; width: 500px; height 500px;"></div>
+  </body>
+</html>
