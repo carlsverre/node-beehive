@@ -7,7 +7,6 @@
       $(document).ready(function() {
         var hive = new BeehiveClient({
           debug: function(s) {
-            console.log(s);
             $('#log').append("<br>"+s);
           },
           debugLevel: 5
@@ -17,12 +16,68 @@
 
         $("#pause").click(hive.pause);
         $("#resume").click(hive.resume);
+        $("#clear").click(function() {
+          $('#log').html('');
+        });
+
+        var imageRefreshTime = 500;
+        var image = document.getElementById('image');
+        var ctx = image.getContext('2d');
+        var canvasData = ctx.getImageData(0,0,image.width,image.height);
+        var last = 0;
+
+        function getImage() {
+          $.ajax({
+            url: '/pixels',
+            dataType: 'json',
+            success: function(pixels) {
+              if(!pixels) return imageError();
+              canvasData.data = pixels;
+              ctx.putImageData(canvasData, 0, 0);
+              setTimeout(loopUpdateImage, imageRefreshTime);
+            }
+          });
+        }
+
+        function updateImage() {
+          $.ajax({
+            url: '/pixels/'+last,
+            dataType: 'json',
+            success: function(data) {
+              if(!data) return imageError();
+              $.each(data, function(i, item) {
+                var p = item.value;
+                canvasData.data[(p.x+p.y*canvasData.width)*4] = p.color;
+                if(i == data.length-1) {
+                  last = item.offset;
+                  ctx.putImageData(canvasData, 0, 0);
+                  setTimeout(loopUpdateImage, imageRefreshTime);
+                }
+              });
+            }
+          });
+        }
+
+        function imageError() {
+          $('#log').append("<br>Error getting image-data!");
+          setTimeout(loopUpdateImage, imageRefreshTime);
+        }
+
+        function loopUpdateImage() {
+          if(hive.paused()) setTimeout(loopUpdateImage, imageRefreshTime);
+          else updateImage();
+        }
+
+        getImage();
       });
     </script>
   </head>
   <body>
+    <canvas id="image" width="50" height="50">You need Canvas to see the result</canvas>
+    <br />
     <input name="pause" type="button" id="pause" value="pause" class="button" />
     <input name="resume" type="button" id="resume" value="Resume" class="button" />
+    <input name="clear" type="button" id="clear" value="clear" class="button" />
     <div id="log" style="border: 1px #000 solid; width: 500px; height 500px;"></div>
   </body>
 </html>
