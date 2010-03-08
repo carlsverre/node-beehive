@@ -23,17 +23,27 @@
         var imageRefreshTime = 500;
         var image = document.getElementById('image');
         var ctx = image.getContext('2d');
-        var canvasData = ctx.getImageData(0,0,image.width,image.height);
         var last = 0;
+
+        function imageError() {
+          $('#log').append("<br>Error getting image-data!");
+          setTimeout(loopUpdateImage, imageRefreshTime);
+        }
+
+        function loopUpdateImage() {
+          if(hive.paused()) setTimeout(loopUpdateImage, imageRefreshTime);
+          else updateImage();
+        }
 
         function getImage() {
           $.ajax({
-            url: '/pixels',
+            url: '/pixels/',
             dataType: 'json',
-            success: function(pixels) {
-              if(!pixels) return imageError();
-              canvasData.data = pixels;
-              ctx.putImageData(canvasData, 0, 0);
+            success: function(data) {
+              if(!data) return imageError();
+              var canvasData = ctx.getImageData(0,0,image.width,image.height);
+              canvasData.data = data;
+              ctx.putImageData(canvasData,0,0);
               setTimeout(loopUpdateImage, imageRefreshTime);
             }
           });
@@ -44,11 +54,17 @@
             url: '/pixels/'+last,
             dataType: 'json',
             success: function(data) {
-              if(!data) return imageError();
-              $.each(data, function(i, item) {
+              if(!data || data==[]) return imageError();
+              var canvasData = ctx.getImageData(0,0,image.width,image.height);
+              $.each(data.reverse(), function(i, item) {
                 var p = item.value;
-                canvasData.data[(p.x+p.y*canvasData.width)*4] = p.color;
-                if(i == data.length-1) {
+                var idx = (p.y+p.x*image.height) * 4;
+                canvasData.data[idx]    = p.color[0];
+                canvasData.data[idx+1]  = p.color[1];
+                canvasData.data[idx+2]  = p.color[2];
+                canvasData.data[idx+3]  = p.color[3];
+
+                if(i == (data.length-1)) {
                   last = item.offset;
                   ctx.putImageData(canvasData, 0, 0);
                   setTimeout(loopUpdateImage, imageRefreshTime);
@@ -56,16 +72,6 @@
               });
             }
           });
-        }
-
-        function imageError() {
-          $('#log').append("<br>Error getting image-data!");
-          setTimeout(loopUpdateImage, imageRefreshTime);
-        }
-
-        function loopUpdateImage() {
-          if(hive.paused()) setTimeout(loopUpdateImage, imageRefreshTime);
-          else updateImage();
         }
 
         getImage();

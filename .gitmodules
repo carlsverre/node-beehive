@@ -1,9 +1,11 @@
 [submodule "lib/support/js-oo"]
 	path = lib/support/js-oo
 	url = git://github.com/visionmedia/js-oo.git
+
 [submodule "examples/Long-Polling-Buffer"]
 	path = examples/Long-Polling-Buffer
-	url = git://github.com/robrighter/Long-Polling-Buffer
+	url = git://github.com/robrighter/Long-Polling-Buffer.git
+
 [submodule "examples/express"]
 	path = examples/express
 	url = git://github.com/visionmedia/express.git

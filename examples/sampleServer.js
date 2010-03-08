@@ -1,5 +1,6 @@
 require.paths.unshift(__dirname + '/../lib');
 require.paths.unshift(__dirname + '/Long-Polling-Buffer/lib');
+require.paths.unshift(__dirname + '/express/lib');
 require('express');
 require('express/plugins');
 require('node-beehive');
@@ -50,11 +51,27 @@ function parseResult(result) {
 Beehive.job(function(payload, init) {
   if(init) return; //no setup
 
-  function rc() {
-    return Math.round(0xff * Math.random());
+  var x = payload.x,
+      y = payload.y,
+      w = 50,
+      h = 50;
+
+  x = 2.5 * (x/w - 0.5);
+  y = 2 * (y/h - 0.5);
+  var x0 = x;
+  var y0 = y;
+  var iteration = 0;
+  var maxIteration = 100;
+
+  while (x*x + y*y <= 4 && iteration < maxIteration) {
+    var xtemp = x*x - y*y + x0;
+    y = 2*x*y + y0;
+    x = xtemp;
+    iteration++;
   }
 
-  var color = [rc(),rc(),rc(),255];
+  var c = Math.round(255*iteration/maxIteration);
+  var color = [c,c,c,255];
 
   return {
     success: true,
@@ -109,10 +126,14 @@ get('/jobs/payload', function() {
 
 
 post('/jobs/result', function() {
-  var c = Beehive.client(this.session.id);
-  c.submitResult(this.params.post);
+  try {
+    var c = Beehive.client(this.session.id);
+    c.submitResult(this.params.post);
 
-  this.halt(200);
+    this.halt(200);
+  } catch(err) {
+    this.halt(500, err+"\n\n"+inspect(err));
+  }
 });
 
 initializePayloads();
