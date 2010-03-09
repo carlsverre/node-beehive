@@ -21,7 +21,7 @@
           $('#log').html('');
         });
 
-        var imageRefreshTime = 1000;
+        var imageRefreshTime = 500;
         var image = document.getElementById('image');
         var ctx = image.getContext('2d');
         var last = 0;
@@ -48,6 +48,12 @@
           setTimeout(loopUpdateImage, imageRefreshTime);
         }
 
+        function imageGetError() {
+          last = 0;
+          resetImage();
+          setTimeout(loopGetImage, imageRefreshTime);
+        }
+
         function loopUpdateImage() {
           if(hive.paused()) setTimeout(loopUpdateImage, imageRefreshTime);
           else updateImage();
@@ -63,7 +69,7 @@
             url: '/pixels/',
             dataType: 'json',
             success: function(data) {
-              if(!data || data.length==0) return imageError();
+              if(!data || data.length==0) return imageGetError();
               var canvasData = ctx.getImageData(0,0,image.width,image.height);
               canvasData.data = data;
               ctx.putImageData(canvasData,0,0);
