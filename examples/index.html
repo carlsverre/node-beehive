@@ -37,32 +37,20 @@
           }
         }
 
+        function resetImage() {
+          ctx.fillStyle = "#000000";
+          ctx.fillRect(0,0,image.width,image.height);
+        }
+
         function imageError() {
           last = 0;
-          setTimeout(loopGetImage, imageRefreshTime);
+          resetImage();
+          setTimeout(loopUpdateImage, imageRefreshTime);
         }
 
         function loopUpdateImage() {
           if(hive.paused()) setTimeout(loopUpdateImage, imageRefreshTime);
           else updateImage();
-        }
-        function loopGetImage() {
-          if(hive.paused()) setTimeout(loopGetImage, imageRefreshTime);
-          else getImage();
-        }
-
-        function getImage() {
-          $.ajax({
-            url: '/pixels/',
-            dataType: 'json',
-            success: function(data) {
-              if(!data) return imageError();
-              var canvasData = ctx.getImageData(0,0,image.width,image.height);
-              canvasData.data = data;
-              ctx.putImageData(canvasData,0,0);
-              setTimeout(loopUpdateImage, imageRefreshTime);
-            }
-          });
         }
 
         function updateImage() {
@@ -93,7 +81,8 @@
           });
         }
 
-        getImage();
+        resetImage();
+        updateImage();
         updateVerify();
       });
     </script>

@@ -25,15 +25,22 @@ var pixels = new Array(height*width);
 var buffer = new lpb.LongPollingBuffer(height*width);
 
 function initializePayloads() {
-  for(var x=0; x < width; x++) {
-    for(var y=0; y < height; y++) {
+  var x=0, y=0;
+
+  function loop() {
+    for(var x=0; x < width; x++) {
       setPixel(x,y,[0,0,0,255]);
       Beehive.payload(jobName, {
-        x: x,
-        y: y
+        x:x, y:y
       });
     }
+
+    y = (y < height) ? y+1 : y;
+
+    setTimeout(loop, 0);
   }
+
+  loop();
 }
 
 function setPixel(x,y,color) {
