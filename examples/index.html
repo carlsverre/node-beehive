@@ -9,7 +9,8 @@
           debug: function(s) {
             $('#log').append("<br>"+s);
           },
-          debugLevel: 5
+          debugLevel: 0,
+          jobLoopTime: 2000
         });
 
         hive.jobLoop();
@@ -25,14 +26,29 @@
         var ctx = image.getContext('2d');
         var last = 0;
 
+        function updateVerify() {
+          if(hive.paused()) setTimeout(updateVerify, 1000);
+          else {
+            $.getJSON('jobs/verifyQueue', function(data) {
+              if(!data) return;
+              console.log(data);
+              setTimeout(updateVerify, 1000);
+            });
+          }
+        }
+
         function imageError() {
-          $('#log').append("<br>Error getting image-data!");
-          setTimeout(loopUpdateImage, imageRefreshTime);
+          last = 0;
+          setTimeout(loopGetImage, imageRefreshTime);
         }
 
         function loopUpdateImage() {
           if(hive.paused()) setTimeout(loopUpdateImage, imageRefreshTime);
           else updateImage();
+        }
+        function loopGetImage() {
+          if(hive.paused()) setTimeout(loopGetImage, imageRefreshTime);
+          else getImage();
         }
 
         function getImage() {
@@ -54,7 +70,7 @@
             url: '/pixels/'+last,
             dataType: 'json',
             success: function(data) {
-              if(!data || data==[]) return imageError();
+              if(!data || data.length==0) return imageError();
               var canvasData = ctx.getImageData(0,0,image.width,image.height);
               $.each(data.reverse(), function(i, item) {
                 var p = item.value;
@@ -70,16 +86,20 @@
                   setTimeout(loopUpdateImage, imageRefreshTime);
                 }
               });
+            },
+            error: function() {
+              return imageError();
             }
           });
         }
 
         getImage();
+        updateVerify();
       });
     </script>
   </head>
   <body>
-    <canvas id="image" width="50" height="50">You need Canvas to see the result</canvas>
+    <canvas id="image" width="200" height="200">You need Canvas to see the result</canvas>
     <br />
     <input name="pause" type="button" id="pause" value="pause" class="button" />
     <input name="resume" type="button" id="resume" value="Resume" class="button" />

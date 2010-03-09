@@ -18,8 +18,9 @@ configure(function() {
 
 // Simple application which maps a array of pixels to clients
 
-var height = 50;
-var width = 50;
+var jobName = 'mandel';
+var height = 200;
+var width = 200;
 var pixels = new Array(height*width);
 var buffer = new lpb.LongPollingBuffer(height*width);
 
@@ -27,16 +28,16 @@ function initializePayloads() {
   for(var x=0; x < width; x++) {
     for(var y=0; y < height; y++) {
       setPixel(x,y,[0,0,0,255]);
-      Beehive.payload({
+      Beehive.payload(jobName, {
         x: x,
         y: y
-      }, parseResult);
+      });
     }
   }
 }
 
 function setPixel(x,y,color) {
-  var i=(y+x*height) * 4;
+  var i=(x*width+y) * 4;
   pixels[i]   = color[0];
   pixels[i+1] = color[1];
   pixels[i+2] = color[2];
@@ -48,16 +49,34 @@ function parseResult(result) {
   buffer.push(result);
 }
 
-Beehive.job(function(payload, init) {
+Beehive.job('red', function(payload, init) {
   if(init) return; //no setup
+
+  var color = [255,0,0,255];
+
+  return {
+    success: true,
+    x: payload.x,
+    y: payload.y,
+    color: color
+  }
+}, parseResult);
+
+Beehive.job('mandel', function(payload, init) {
+  if(init) return;
 
   var x = payload.x,
       y = payload.y,
-      w = 50,
-      h = 50;
+      w = 200,
+      h = 200;
 
-  x = 2.5 * (x/w - 0.5);
-  y = 2 * (y/h - 0.5);
+  var cpw = 0.8,
+      cph = 0.8,
+      xo  = 1.9,
+      yo  = 0.5;
+
+  x = cpw * (x/w - xo);
+  y = cph * (y/h - yo);
   var x0 = x;
   var y0 = y;
   var iteration = 0;
@@ -70,8 +89,16 @@ Beehive.job(function(payload, init) {
     iteration++;
   }
 
-  var c = Math.round(255*iteration/maxIteration);
-  var color = [c,c,c,255];
+  //var c = Math.round(255*iteration/maxIteration);
+  var r,g,b;
+  if(iteration == maxIteration) r=0,g=0,b=0;
+  else {
+    r = 0xaa-iteration*3;
+    g = 0xff-iteration*9;
+    b = iteration*4;
+  }
+
+  var color = [r,g,b,255];
 
   return {
     success: true,
@@ -79,7 +106,7 @@ Beehive.job(function(payload, init) {
     y: payload.y,
     color: color
   }
-});
+}, parseResult);
 
 // STATIC ROUTES
 get('/', function() {
@@ -110,31 +137,51 @@ get('/ping', function() {
 });
 
 get('/jobs/job', function() {
-  var c = Beehive.client(this.session.id);
+  try {
+    var c = Beehive.client(this.session.id, jobName);
 
-  this.contentType('json');
-  return c.getJobJSON();
+    this.contentType('json');
+    return c.getJobJSON();
+  } catch(err) {
+    this.halt(500, err+"\n\n"+inspect(err.stack));
+  }
 });
 
 
 get('/jobs/payload', function() {
-  var c = Beehive.client(this.session.id);
+  try {
+    var c = Beehive.client(this.session.id, jobName);
 
-  this.contentType('json');
-  return c.getPayloadJSON();
+    this.contentType('json');
+    return c.getPayloadJSON();
+  } catch(err) {
+    this.halt(500, err+"\n\n"+inspect(err.stack));
+  }
 });
 
 
 post('/jobs/result', function() {
   try {
-    var c = Beehive.client(this.session.id);
+    var c = Beehive.client(this.session.id, jobName);
     c.submitResult(this.params.post);
 
     this.halt(200);
   } catch(err) {
-    this.halt(500, err+"\n\n"+inspect(err));
+    this.halt(500, err+"\n\n"+inspect(err.stack));
   }
+});
+
+get('/jobs/verifyQueue', function() {
+  return JSON.stringify(Beehive.jobs[jobName].verify);
 });
 
 initializePayloads();
 run(3000,'0.0.0.0');
+
+// local workers
+///*
+for(var i=0; i<5000; i++) {
+  var c = Beehive.client(false, jobName);
+  c.runLocal(1000);
+}
+//*/
